@@ -1,0 +1,97 @@
+# Summary statistics from tree sequences
+
+
+```{r, echo=FALSE}
+library(reticulate)
+```
+
+First, we need a tree sequence, which we will get via `msprime` using the continuous time coalescent 
+model with scaled mutation rate $\theta = 100$ and scaled recombination rate $\rho = 100$. Reminding
+ourselves that `msprime` measure time in units of `N` generations by default, we divide our
+input parameters by 4:
+
+```{python}
+import msprime
+
+ts = msprime.simulate(100,
+                      recombination_rate=25.,
+                      mutation_rate=25.,
+                      random_seed=3210987)
+```
+
+## Site statistics
+
+```{python}
+pi = ts.diversity([[i for i in ts.samples()]])
+print("Pi from the tree sequence = {}".format(pi))
+```
+
+## From the genotype matrix
+
+```{python}
+gm = ts.genotype_matrix()
+```
+
+The matrix is a `numpy` array:
+
+```{python}
+print(type(gm))
+```
+
+Inspecting the shape shows us that matrix rows are variable sites and that 
+columns are haplotypes:
+
+```{python}
+print(gm.shape)
+```
+
+Therefore, to calculate $\pi$, we need the to operate on the row sums, which are the derived allele
+counts in the sample for each site:
+
+```{python}
+import numpy as np
+
+# Change the dtype so that we can use only one array
+heterozygosity_per_variant = np.sum(gm, axis=1).astype(np.float)
+heterozygosity_per_variant *= 2*(100. - heterozygosity_per_variant)
+heterozygosity_per_variant /= (100.*(100. - 1))
+pi = heterozygosity_per_variant.sum()
+print("Pi from the genotype matrix = {}".format(pi))
+```
+
+We can also transfer data from Python into `R`:
+
+```{r}
+gm = py$gm
+heterozygosity_per_variant <- rowSums(gm)
+heterozygosity_per_variant <- heterozygosity_per_variant * 2*(100. - heterozygosity_per_variant)
+heterozygosity_per_variant <- heterozygosity_per_variant / (100.*(100. - 1))
+pi <- sum(heterozygosity_per_variant)
+print(paste("Pi calculated in R from a matrix =", pi))
+```
+
+## Using third-party packages
+
+### pylibseq
+
+```{python}
+# My lab have convinced my to change the import
+# name to pylibseq, which I'll do in the next release. ;)
+import libsequence
+
+vm = libsequence.VariantMatrix(gm, ts.tables.sites.position)
+ac = vm.count_alleles()
+pi = libsequence.thetapi(ac)
+print("Pi from libsequence = {}".format(pi))
+```
+
+### scikit-allel
+
+```{python}
+import allel
+
+haplotype_array = allel.HaplotypeArray(gm)
+ac = haplotype_array.count_alleles()
+pi = allel.mean_pairwise_difference(ac).sum()
+print("Pi from allel = {}".format(pi))
+```
