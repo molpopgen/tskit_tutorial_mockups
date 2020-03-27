@@ -1,7 +1,7 @@
 HTMLFILES:=html/summstats.html
 
 html/%.html: mdinputs/%.Rmd
-	RETICULATE_PYTHON=`which python3` r -e "rmarkdown::render(\"$<\", output_file=\"$@\", output_dir=\"./html\")"
+	RETICULATE_PYTHON=`which python3` R --no-save -e "rmarkdown::render(\"$<\", output_file=\"$@\", output_dir=\"./html\")"
 
 all: ${HTMLFILES}
 

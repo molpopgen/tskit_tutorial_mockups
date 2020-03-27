@@ -5,11 +5,9 @@
 So, so many. An absolute bare minimum list may look like:
 
 * R
-* `r`, aka `littler`.
 * python3
 * knitr
 * pandoc
-* LaTeX (for pdf output)
 * reticulate
 * tskit
 
